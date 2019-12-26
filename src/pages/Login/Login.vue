@@ -4,56 +4,152 @@
       <div class="login_header">
         <h2 class="login_logo">硅谷外卖</h2>
         <div class="login_header_title">
-          <a href="javascript:;" class="on">短信登录</a>
-          <a href="javascript:;">密码登录</a>
+          <a href="javascript:;" :class="{on:isShowSms}" @click="isShowSms = true">{{$t('login_sms')}}</a>
+          <a href="javascript:;" :class="{on:!isShowSms}" @click="isShowSms = false">{{$t('login_pwd')}}</a>
         </div>
       </div>
       <div class="login_content">
         <form>
-          <div class="on">
+          <div :class="{on:isShowSms}">
             <section class="login_message">
-              <input type="tel" maxlength="11" placeholder="手机号">
-              <button disabled="disabled" class="get_verification">获取验证码</button>
+              <input type="tel" maxlength="11" v-model="phone" :placeholder="$t('login_phone')" name="phone" v-validate="'required|mobile'">
+              <span style="color: red;" v-show="errors.has('phone')">{{ errors.first('phone') }}</span>
+              <button :disabled="!isRightPhone || setTime>0" 
+                class="get_verification" 
+                :class="{phone_right_number:isRightPhone}" 
+                @click.prevent="getCode">
+                {{setTime ?  `短信已发送(${setTime}s)` : '获取验证码'}}
+              </button>
             </section>
             <section class="login_verification">
-              <input type="tel" maxlength="8" placeholder="验证码">
+              <input type="tel" maxlength="6" v-model="code" :placeholder="$t('login_code')"  name="code" v-validate="{required: true,regex: /^\d{6}$/}">
+              <span style="color: red;" v-show="errors.has('code')">{{ errors.first('code') }}</span>
             </section>
             <section class="login_hint">
               温馨提示：未注册硅谷外卖帐号的手机号，登录时将自动注册，且代表已同意
               <a href="javascript:;">《用户服务协议》</a>
             </section>
           </div>
-          <div>
+          <div :class="{on:!isShowSms}">
             <section>
               <section class="login_message">
-                <input type="tel" maxlength="11" placeholder="手机/邮箱/用户名">
+                <input type="text" v-model="name" :placeholder="$t('login_username')" name="name" v-validate="'required'">
+                <span style="color: red;" v-show="errors.has('name')">{{ errors.first('name') }}</span>
               </section>
               <section class="login_verification">
-                <input type="tel" maxlength="8" placeholder="密码">
-                <div class="switch_button off">
-                  <div class="switch_circle"></div>
-                  <span class="switch_text">...</span>
+                <input :type="isShowPwd ? 'text' : 'password'" maxlength="8" v-model="pwd" :placeholder="$t('login_password')" name="pwd" v-validate="'required'">
+                <span style="color: red;" v-show="errors.has('pwd')">{{ errors.first('pwd') }}</span>
+                <div class="switch_button off" @click="isShowPwd = !isShowPwd" :class="isShowPwd ? 'on' : 'off'">
+                  <div class="switch_circle" :class="{right:isShowPwd}"></div>
+                  <span class="switch_text">{{isShowPwd ? 'abc' : ''}}</span>
                 </div>
               </section>
               <section class="login_message">
-                <input type="text" maxlength="11" placeholder="验证码">
-                <img class="get_verification" src="./images/captcha.svg" alt="captcha">
+                <input type="text" maxlength="4" v-model="captcha" :placeholder="$t('login_code')" name="captcha" v-validate="{required: true,regex: /^[0-9a-zA-Z]{4}$/}">
+                <span style="color: red;" v-show="errors.has('captcha')">{{ errors.first('captcha') }}</span>
+                <img class="get_verification" ref="ca" src="http://localhost:4000/captcha" alt="captcha" @click="updateCaptcha">
               </section>
             </section>
           </div>
-          <button class="login_submit">登录</button>
+          <button class="login_submit" @click.prevent="login">{{$t('login_login')}}</button>
         </form>
-        <a href="javascript:;" class="about_us">关于我们</a>
+        <a href="javascript:;" class="about_us">{{$t('login_about')}}</a>
       </div>
-      <a href="javascript:" class="go_back">
+      <a href="javascript:" class="go_back" @click="$router.replace('/profile')">
         <i class="iconfont icon-jiantou2"></i>
       </a>
+      <button @click="switchLang">{{$t('login_language')}}</button>
     </div>
   </section>
 </template>
 
 <script type="text/ecmascript-6">
+  import { MessageBox, Toast } from 'mint-ui'
   export default {
+    data(){
+      return {
+        isShowSms:false,
+        isShowPwd:false,
+        setTime:0,
+        phone:'',
+        code:'',
+        name:'',
+        pwd:'',
+        captcha:''
+      }
+    },
+    computed:{
+      isRightPhone () {
+        return /^1\d{10}$/.test(this.phone)
+      }
+    },
+    methods:{
+      async login(){
+        let names
+        if (this.isShowSms) {
+          names = ['phone','code']
+        }else{
+          names = ['name','pwd','captcha']
+        }
+        const success = await this.$validator.validateAll(names)
+        let result
+        if (success) {
+          let { isShowSms, phone, code, name, pwd, captcha } = this
+          if (isShowSms) {
+            result = await this.$API.reqSmsLogin({phone, code})
+          }else{
+            result = await this.$API.reqPwdLogin({name, pwd, captcha})
+            this.captcha = ''
+          }
+          if (result.code === 0) {
+            this.$store.dispatch('saveUser',result.data)
+            this.$router.replace('/profile')
+            this.updateCaptcha()
+          }else{
+            this.updateCaptcha()
+            Toast(result.msg)
+          }
+        }
+      }, 
+      async getCode(){
+        this.setTime = 10
+        const timeId = setInterval(() => {
+          this.setTime--
+          if (this.setTime <= 0) {
+            clearInterval(timeId) 
+            this.setTime = 0
+          }
+        }, 1000);
+        const result = await this.$API.reqSendCode(this.phone)
+        if (result.code === 0) {
+          Toast('验证码已发送')
+        }else{
+          this.setTime = 0
+          MessageBox('提示',result.msg)
+        }
+      },
+      updateCaptcha(){
+        this.$refs.ca.src = 'http://localhost:4000/captcha?time=' + Date.now()
+      },
+      switchLang(){
+        let locale = this.$i18n.locale === 'en' ? 'zh_CN' : 'en'
+        console.log(this.$i18n.locale)
+        this.$i18n.locale = locale
+        localStorage.setItem('locale_key', locale)
+      }
+    },
+    beforeRouteEnter (to, from, next) {
+      next((comp) => { // 回调函数在组件对象创建后回调执行, 并传入组件对象
+        const token = comp.$store.state.user.token
+        // 如果已经登陆, 强制跳转到个人中心
+        if (token) {
+          next('/profile')
+        } else {
+          // 否则, 放行
+          next()
+        }
+      })
+    },
   }
 </script>
 
@@ -118,6 +214,8 @@
                 color #ccc
                 font-size 14px
                 background transparent
+                &.phone_right_number
+                  color black
             .login_verification
               position relative
               margin-top 16px
@@ -141,7 +239,7 @@
                 &.off
                   background #fff
                   .switch_text
-                    float right
+                    float left
                     color #ddd
                 &.on
                   background #02a774
@@ -157,6 +255,8 @@
                   background #fff
                   box-shadow 0 2px 4px 0 rgba(0,0,0,.1)
                   transition transform .3s
+                  &.right
+                    transform translateX(27px)
             .login_hint
               margin-top 12px
               color #999

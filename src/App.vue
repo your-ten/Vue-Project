@@ -1,6 +1,8 @@
 <template>
   <div>
-    <router-view></router-view>
+    <keep-alive exclude="search,shop">
+      <router-view></router-view>
+    </keep-alive>
     <FooterGuide v-show="$route.meta.isShowFooter"></FooterGuide>
   </div>
 </template>
@@ -9,6 +11,7 @@
   import FooterGuide from '@/components/FooterGuide/FooterGuide'
   export default {
     mounted(){
+      this.$store.dispatch('autoLogin')
       this.$store.dispatch('getAddress')
     },
     components:{

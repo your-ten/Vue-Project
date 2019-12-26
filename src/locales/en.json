@@ -1,0 +1,11 @@
+{
+  "login_login": "login",
+  "login_about": "about",
+  "login_phone": "phone",
+  "login_username": "phone/email/name",
+  "login_password": "password",
+  "login_code":"Verification code",
+  "login_language": "Language",
+  "login_pwd": "Password login",
+  "login_sms": "Phone login"
+}

@@ -15,8 +15,10 @@ module.exports = {
       }
     }
   },
+
   // runtimeCompiler:true,
-  // lintOnSave:false,
+  lintOnSave:false,
+
   devServer: {
     proxy: {
       '/api': {
@@ -26,6 +28,7 @@ module.exports = {
       }
     }
   },
+
   css: { // 添加postcss配置
     loaderOptions: {
       postcss: {
@@ -35,4 +38,13 @@ module.exports = {
       }
     }
   },
+
+  pluginOptions: {
+    i18n: {
+      locale: 'zh_CN',
+      fallbackLocale: 'en',
+      localeDir: 'locales',
+      enableInSFC: false
+    }
+  }
 }

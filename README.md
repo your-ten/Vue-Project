@@ -1,24 +1,5 @@
-# my-project
-
-## Project setup
-```
-yarn install
-```
-
-### Compiles and hot-reloads for development
-```
-yarn serve
-```
-
-### Compiles and minifies for production
-```
-yarn build
-```
-
-### Lints and fixes files
-```
-yarn lint
-```
-
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
+my project
+立即开始我的Vue项目
+本项目是外卖项目
+本人计算机科学与技术
+C1641
